@@ -104,25 +104,27 @@ SembastCodec getEncryptSembastCodec({required String password}) => SembastCodec(
     signature: 'encrypt',
     codec: _EncryptCodec(_generateEncryptPassword(password)));
 
-getDb(String dbName) async {
-  DatabaseFactory dbFactory = databaseFactoryIo;
-  const secureStorage = FlutterSecureStorage();
-  const chars =
-      'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
-  Random rnd = Random.secure();
-  final encryptionKey = await secureStorage.read(key: "$dbName-key");
-  if (encryptionKey == null) {
-    final key = String.fromCharCodes(Iterable.generate(
-        16, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
-    await secureStorage.write(
-      key: "$dbName-key",
-      value: key,
-    );
+class Utils {
+  static Future<Database> getDb(String dbName) async {
+    DatabaseFactory dbFactory = databaseFactoryIo;
+    const secureStorage = FlutterSecureStorage();
+    const chars =
+        'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+    Random rnd = Random.secure();
+    final encryptionKey = await secureStorage.read(key: "$dbName-key");
+    if (encryptionKey == null) {
+      final key = String.fromCharCodes(Iterable.generate(
+          16, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+      await secureStorage.write(
+        key: "$dbName-key",
+        value: key,
+      );
+    }
+    final key = await secureStorage.read(key: "$dbName-key");
+    final codec = getEncryptSembastCodec(password: key!);
+    Directory appDocDir = await getApplicationDocumentsDirectory();
+    String appDocPath = appDocDir.path;
+    String dbPath = '$appDocPath/$dbName.db';
+    return await dbFactory.openDatabase(dbPath, codec: codec);
   }
-  final key = await secureStorage.read(key: "$dbName-key");
-  final codec = getEncryptSembastCodec(password: key!);
-  Directory appDocDir = await getApplicationDocumentsDirectory();
-  String appDocPath = appDocDir.path;
-  String dbPath = '$appDocPath/$dbName.db';
-  return await dbFactory.openDatabase(dbPath, codec: codec);
 }
